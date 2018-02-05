@@ -114,6 +114,13 @@ public class BluetoothActivity extends AppCompatActivity {
             bluetoothScanBtn.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v){
+                    bluetoothOn(v);
+                }
+            });
+
+            bluetoothOffBtn.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v){
                     bluetoothOff(v);
                 }
             });
