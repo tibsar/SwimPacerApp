@@ -7,11 +7,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.icu.util.Output;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -25,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -46,6 +51,7 @@ public class BluetoothActivity extends AppCompatActivity {
     private ListView devicesListView;
     private CheckBox ledChk;
 
+    private final String TAG = BluetoothActivity.class.getSimpleName();
     private Handler handler;                //main handler that receives callback notifications
     private ConnectedThread connectedThread; // bluetooth background worker thread
 
@@ -74,6 +80,11 @@ public class BluetoothActivity extends AppCompatActivity {
         devicesListView = (ListView)findViewById(R.id.devicesListView);
         devicesListView.setAdapter(bluetoothArrayAdapter);  // assign model to view
         devicesListView.setOnItemClickListener(deviceClickListener);
+
+        // Ask for location permission if not already allowed
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+        }
 
         handler = new Handler(){
             public void handleMessage(android.os.Message msg){
@@ -143,7 +154,7 @@ public class BluetoothActivity extends AppCompatActivity {
     }
 
     private void bluetoothOn(View view){
-        if(bluetoothAdapter.isEnabled()){
+        if(!bluetoothAdapter.isEnabled()){
             Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BLUETOOTH);
             bluetoothStatus.setText("Bluetooth enabled");
@@ -279,6 +290,13 @@ public class BluetoothActivity extends AppCompatActivity {
 
     private BluetoothSocket createBluetoothSocket(BluetoothDevice device) throws IOException {
         // Creates secure outgoing connection with Bluetooth device using UUID
+        try {
+            final Method m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", UUID.class);
+            return (BluetoothSocket) m.invoke(device, BTMODULEUUID);
+        } catch (Exception e) {
+            Log.e(TAG, "Could not create Insecure RFComm Connection",e);
+        }
+
         return device.createRfcommSocketToServiceRecord(BTMODULEUUID);
     }
 
@@ -316,6 +334,8 @@ public class BluetoothActivity extends AppCompatActivity {
                     //Read from the InputStream
                     bytes = threadInStream.available();
                     if(bytes != 0){
+//                        buffer = new byte[1024];
+
                         // Pause and wait for the rest of the data
                         SystemClock.sleep(100); // can be adjusted based on system speed
                         bytes = threadInStream.available(); // How many bytes are ready to be read?
