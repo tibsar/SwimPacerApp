@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
@@ -192,6 +193,7 @@ public class BluetoothActivity extends AppCompatActivity {
         //Check if the device is already discovering
         if(bluetoothAdapter.isDiscovering()){
             bluetoothAdapter.cancelDiscovery();
+//            unregisterReceiver(broadcastReceiver);
             Toast.makeText(getApplicationContext(), "Discovery stopped", Toast.LENGTH_SHORT).show();
         } else {
             if(bluetoothAdapter.isEnabled()){
@@ -221,6 +223,7 @@ public class BluetoothActivity extends AppCompatActivity {
     };
 
     private void listPairedDevices(View view){
+        bluetoothArrayAdapter.clear();
         pairedDevices = bluetoothAdapter.getBondedDevices();
         if(bluetoothAdapter.isEnabled()){
             // Put its one to the adapter
@@ -268,13 +271,34 @@ public class BluetoothActivity extends AppCompatActivity {
                         bluetoothSocket.connect();
                     } catch(IOException e){
                         try {
-                            fail = true;
-                            bluetoothSocket.close();
-                            handler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
-                        } catch (IOException e2){
+//                            // fallback method for android >= 4.2
+                            bluetoothSocket = (BluetoothSocket)device.getClass().getMethod("createRfcommSocket", new Class[]{Integer.TYPE}).invoke(device, new Object[]{Integer.valueOf(1)});
+
+                            try {
+                                bluetoothSocket.connect();
+                            } catch (IOException e2){
+                                try{
+                                    fail = true;
+                                    bluetoothSocket.close();
+                                    handler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
+                                } catch (IOException e3){
+                                    //@Todo Insert code to handle this
+                                    Toast.makeText(getBaseContext(), "Socket creation failed", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+
+                        } catch (NoSuchMethodException e2){
+                            //@Todo Insert code to handle this
+                            Toast.makeText(getBaseContext(), "Socket creation failed", Toast.LENGTH_SHORT).show();
+                        } catch (IllegalAccessException e2){
+                            //@Todo Insert code to handle this
+                            Toast.makeText(getBaseContext(), "Socket creation failed", Toast.LENGTH_SHORT).show();
+                        } catch (InvocationTargetException e2){
                             //@Todo Insert code to handle this
                             Toast.makeText(getBaseContext(), "Socket creation failed", Toast.LENGTH_SHORT).show();
                         }
+
+
                     }
 
                     if(fail == false){
@@ -292,12 +316,13 @@ public class BluetoothActivity extends AppCompatActivity {
         // Creates secure outgoing connection with Bluetooth device using UUID
         try {
             final Method m = device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", UUID.class);
+
             return (BluetoothSocket) m.invoke(device, BTMODULEUUID);
         } catch (Exception e) {
             Log.e(TAG, "Could not create Insecure RFComm Connection",e);
         }
 
-        return device.createRfcommSocketToServiceRecord(BTMODULEUUID);
+        return device.createInsecureRfcommSocketToServiceRecord(BTMODULEUUID);
     }
 
     private class ConnectedThread extends Thread {
@@ -334,7 +359,7 @@ public class BluetoothActivity extends AppCompatActivity {
                     //Read from the InputStream
                     bytes = threadInStream.available();
                     if(bytes != 0){
-//                        buffer = new byte[1024];
+                        buffer = new byte[1024];
 
                         // Pause and wait for the rest of the data
                         SystemClock.sleep(100); // can be adjusted based on system speed
