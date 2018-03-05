@@ -33,6 +33,7 @@
             </intent-filter>
         </activity>
         <!-- <activity android:name=".BluetoothActivity"></activity> -->
+        <activity android:name=".PaceInfo"></activity>
     </application>
 
 </manifest>
