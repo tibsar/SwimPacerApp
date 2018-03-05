@@ -215,9 +215,12 @@ public class BluetoothActivity extends AppCompatActivity {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 
                 // Add the name to the list
-                //@Todo Only add swim pacer
-                bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
-                bluetoothArrayAdapter.notifyDataSetChanged();
+                String deviceName = device.getName();
+                if(deviceName.equals("raspberrypi")){
+                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                    bluetoothArrayAdapter.notifyDataSetChanged();
+                }
+
             }
         }
     };
@@ -228,7 +231,11 @@ public class BluetoothActivity extends AppCompatActivity {
         if(bluetoothAdapter.isEnabled()){
             // Put its one to the adapter
             for(BluetoothDevice device : pairedDevices){
-                bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                String deviceName = device.getName();
+                if(deviceName.equals("raspberrypi")){
+                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                }
+
             }
 
             Toast.makeText(getApplicationContext(), "Show Paired Devices", Toast.LENGTH_SHORT).show();
@@ -326,11 +333,13 @@ public class BluetoothActivity extends AppCompatActivity {
     }
 
     private class ConnectedThread extends Thread {
-        private final BluetoothSocket threadSocket;
-        private final InputStream threadInStream;
-        private final OutputStream threadOutStream;
+        private BluetoothSocket threadSocket;
+        private InputStream threadInStream;
+        private OutputStream threadOutStream;
 
         public ConnectedThread(BluetoothSocket socket){
+            cancel(); //Cancel connection before trying to connect
+
             threadSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
@@ -387,11 +396,24 @@ public class BluetoothActivity extends AppCompatActivity {
 
         // Call this from the activity to shutdown the connection
         public void cancel(){
-            try{
-                threadSocket.close();
-            } catch(IOException e){
-                //@TODO handle exception
+
+            if (threadInStream != null) {
+                try {threadInStream.close();} catch (Exception e) {}
+                threadInStream = null;
             }
+
+            if (threadOutStream != null) {
+                try {threadOutStream.close();} catch (Exception e) {}
+                threadOutStream = null;
+            }
+
+            if (threadSocket != null) {
+                try {threadSocket.close();} catch (Exception e) {}
+                threadSocket = null;
+            }
+
+
+
         }
     }
 
