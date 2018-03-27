@@ -8,11 +8,16 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.content.Intent;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        //Start the Bluetooth Service
+        Intent serviceIntent = new Intent(this, BluetoothService.class);
+        startService(serviceIntent);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -36,5 +41,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void sendToBluetoothActivity(View view){
+        Intent intent = new Intent(MainActivity.this, BluetoothActivity.class);
+        startActivity(intent);
     }
 }

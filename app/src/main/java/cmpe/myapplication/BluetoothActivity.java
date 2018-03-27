@@ -4,12 +4,15 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.icu.util.Output;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -39,18 +42,12 @@ import java.util.UUID;
 public class BluetoothActivity extends AppCompatActivity {
 
     //GUI components
-    private TextView bluetoothStatus;
-    private TextView readBuffer;
-    private Button bluetoothScanBtn;
-    private Button bluetoothOffBtn;
     private Button bluetoothDiscoverBtn;
-    private Button listPairedDevicesBtn;
-    private BluetoothAdapter bluetoothAdapter;
+//    private BluetoothAdapter bluetoothAdapter;
     private BluetoothSocket bluetoothSocket = null; // bi-directional client-to-client data path
     private Set<BluetoothDevice> pairedDevices;
     private ArrayAdapter<String> bluetoothArrayAdapter;
     private ListView devicesListView;
-    private CheckBox ledChk;
 
     private final String TAG = BluetoothActivity.class.getSimpleName();
     private Handler handler;                //main handler that receives callback notifications
@@ -62,21 +59,20 @@ public class BluetoothActivity extends AppCompatActivity {
     private final static int CONNECTING_STATUS = 3; //used in bluetooth handler to identify message status 
     private static final UUID BTMODULEUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
 
+
+    //Bluetooth Service definitions
+    private BluetoothService bluetoothService;
+    private boolean bounded;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
 
-        bluetoothStatus = (TextView)findViewById(R.id.bluetoothStatus);
-        readBuffer = (TextView)findViewById(R.id.readBuffer);
-        bluetoothScanBtn = (Button)findViewById(R.id.scan);
-        bluetoothOffBtn = (Button)findViewById(R.id.off);
         bluetoothDiscoverBtn = (Button)findViewById(R.id.discover);
-        listPairedDevicesBtn = (Button)findViewById(R.id.PairedBtn);
-        ledChk = (CheckBox)findViewById(R.id.checkboxLED1);
 
         bluetoothArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();  // get a handle on the bluetooth radio
+//        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();  // get a handle on the bluetooth radio
 
         devicesListView = (ListView)findViewById(R.id.devicesListView);
         devicesListView.setAdapter(bluetoothArrayAdapter);  // assign model to view
@@ -96,53 +92,16 @@ public class BluetoothActivity extends AppCompatActivity {
                     } catch (UnsupportedEncodingException e){
                         e.printStackTrace();
                     }
-                    readBuffer.setText(readMessage);
+//                    readBuffer.setText(readMessage);
                 }
 
-                if(msg.what == CONNECTING_STATUS){
-                    if(msg.arg1 == 1){
-                        bluetoothStatus.setText("Connected to Device: " + (String)(msg.obj));
-                    } else {
-                        bluetoothStatus.setText("Connection Failed");
-                    }
-                }
             }
         };
 
         if(bluetoothArrayAdapter == null){
             //Device does not support Bluetooth
-            bluetoothStatus.setText("Status: Bluetooth not found");
             Toast.makeText(getApplicationContext(), "Bluetooth device not found!", Toast.LENGTH_SHORT).show();
         } else {
-            ledChk.setOnClickListener(new View.OnClickListener(){
-                @Override
-                public void onClick(View v){
-                    if(connectedThread != null){    //First check to make sure thread created
-                        connectedThread.write("1");
-                    }
-                }
-            });
-
-            bluetoothScanBtn.setOnClickListener(new View.OnClickListener(){
-                @Override
-                public void onClick(View v){
-                    bluetoothOn(v);
-                }
-            });
-
-            bluetoothOffBtn.setOnClickListener(new View.OnClickListener(){
-                @Override
-                public void onClick(View v){
-                    bluetoothOff(v);
-                }
-            });
-
-            listPairedDevicesBtn.setOnClickListener(new View.OnClickListener(){
-                @Override
-                public void onClick(View v){
-                    listPairedDevices(v);
-                }
-            });
 
             bluetoothDiscoverBtn.setOnClickListener(new View.OnClickListener(){
                 @Override
@@ -154,105 +113,125 @@ public class BluetoothActivity extends AppCompatActivity {
 
     }
 
-    private void bluetoothOn(View view){
-        if(!bluetoothAdapter.isEnabled()){
-            Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BLUETOOTH);
-            bluetoothStatus.setText("Bluetooth enabled");
-            Toast.makeText(getApplicationContext(), "Bluetooth turned on", Toast.LENGTH_SHORT).show();
-
-        } else {
-            Toast.makeText(getApplicationContext(), "Bluetooth is already on", Toast.LENGTH_SHORT).show();
-
-        }
-    }
-
-    //Enter here after user selects "yes" or "no" to enabling radio
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent Data){
-        //Check which request we are responding to
-        if(requestCode == REQUEST_ENABLE_BLUETOOTH){
-            //Make sure the request was successful
-            if(resultCode == RESULT_OK){
-                // The user picked a contact.
-                // The Intent's data Uri identifies which contact was selected
-                bluetoothStatus.setText("Enabled");
-            } else {
-                bluetoothStatus.setText("Disabled");
-            }
-        }
-    }
+    protected void onStart() {
+        super.onStart();
 
-    private void bluetoothOff(View view){
-        bluetoothAdapter.disable(); //Turn off
-        bluetoothStatus.setText("Bluetooth disabled");
-        Toast.makeText(getApplicationContext(), "Bluetooth turned off", Toast.LENGTH_SHORT).show();
-    }
+        Intent intent = new Intent(this, BluetoothService.class);
+        bindService(intent, connection, BIND_AUTO_CREATE);
+    };
 
-    private void discover(View view){
-        //Check if the device is already discovering
-        if(bluetoothAdapter.isDiscovering()){
-            bluetoothAdapter.cancelDiscovery();
-//            unregisterReceiver(broadcastReceiver);
-            Toast.makeText(getApplicationContext(), "Discovery stopped", Toast.LENGTH_SHORT).show();
-        } else {
-            if(bluetoothAdapter.isEnabled()){
-                bluetoothArrayAdapter.clear(); //Clear items
-                bluetoothAdapter.startDiscovery();
-                Toast.makeText(getApplicationContext(), "Discovery started", Toast.LENGTH_SHORT).show();
-                registerReceiver(broadcastReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
-            } else {
-                Toast.makeText(getApplicationContext(), "Bluetooth is not on", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    ServiceConnection connection = new ServiceConnection() {
         @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if(BluetoothDevice.ACTION_FOUND.equals(action)){
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+        public void onServiceDisconnected(ComponentName name) {
+            Toast.makeText(BluetoothActivity.this, "Service is disconnected", 1000).show();
+            bounded = false;
+            bluetoothService = null;
+        }
 
-                // Add the name to the list
-                String deviceName = device.getName();
-                if(deviceName.equals("raspberrypi")){
-                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
-                    bluetoothArrayAdapter.notifyDataSetChanged();
-                }
-
-            }
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Toast.makeText(BluetoothActivity.this, "Service is connected", 1000).show();
+            bounded = true;
+            BluetoothService.LocalBinder mLocalBinder = (BluetoothService.LocalBinder)service;
+            bluetoothService = mLocalBinder.getServiceInstance();
         }
     };
 
-    private void listPairedDevices(View view){
-        bluetoothArrayAdapter.clear();
-        pairedDevices = bluetoothAdapter.getBondedDevices();
-        if(bluetoothAdapter.isEnabled()){
-            // Put its one to the adapter
-            for(BluetoothDevice device : pairedDevices){
-                String deviceName = device.getName();
-                if(deviceName.equals("raspberrypi")){
-                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
-                }
-
-            }
-
-            Toast.makeText(getApplicationContext(), "Show Paired Devices", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(getApplicationContext(), "Bluetooth not on", Toast.LENGTH_SHORT).show();
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(bounded) {
+            unbindService(connection);
+            bounded = false;
         }
+    };
+
+//    private void bluetoothOn(View view){
+//
+////        if(!bluetoothAdapter.isEnabled()){
+////            Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+////            startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BLUETOOTH);
+////            Toast.makeText(getApplicationContext(), "Bluetooth turned on", Toast.LENGTH_SHORT).show();
+////
+////        } else {
+////            Toast.makeText(getApplicationContext(), "Bluetooth is already on", Toast.LENGTH_SHORT).show();
+////
+////        }
+//    }
+
+//    private void bluetoothOff(View view){
+//        bluetoothAdapter.disable(); //Turn off
+//        Toast.makeText(getApplicationContext(), "Bluetooth turned off", Toast.LENGTH_SHORT).show();
+//    }
+
+    private void discover(View view){
+        bluetoothArrayAdapter.clear(); //Clear items
+        bluetoothService.discover(view);
+//        //Check if the device is already discovering
+//        if(bluetoothAdapter.isDiscovering()){
+//            bluetoothAdapter.cancelDiscovery();
+////            unregisterReceiver(broadcastReceiver);
+//            Toast.makeText(getApplicationContext(), "Discovery stopped", Toast.LENGTH_SHORT).show();
+//        } else {
+//            if(bluetoothAdapter.isEnabled()){
+//                bluetoothArrayAdapter.clear(); //Clear items
+//                bluetoothAdapter.startDiscovery();
+//                Toast.makeText(getApplicationContext(), "Discovery started", Toast.LENGTH_SHORT).show();
+//                registerReceiver(broadcastReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
+//            } else {
+//                Toast.makeText(getApplicationContext(), "Bluetooth is not on", Toast.LENGTH_SHORT).show();
+//            }
+//        }
+
+
     }
+
+//    final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            String action = intent.getAction();
+//            if(BluetoothDevice.ACTION_FOUND.equals(action)){
+//                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+//
+//                // Add the name to the list
+//                String deviceName = device.getName();
+//                if(deviceName.equals("raspberrypi")){
+//                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+//                    bluetoothArrayAdapter.notifyDataSetChanged();
+//                }
+//
+//            }
+//        }
+//    };
+
+    //NEEDED?
+//    private void listPairedDevices(View view){
+//        bluetoothArrayAdapter.clear();
+//        pairedDevices = bluetoothAdapter.getBondedDevices();
+//        if(bluetoothAdapter.isEnabled()){
+//            // Put its one to the adapter
+//            for(BluetoothDevice device : pairedDevices){
+//                String deviceName = device.getName();
+//                if(deviceName.equals("raspberrypi")){
+//                    bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+//                }
+//
+//            }
+//
+//            Toast.makeText(getApplicationContext(), "Show Paired Devices", Toast.LENGTH_SHORT).show();
+//        } else {
+//            Toast.makeText(getApplicationContext(), "Bluetooth not on", Toast.LENGTH_SHORT).show();
+//        }
+//    }
 
     private AdapterView.OnItemClickListener deviceClickListener = new AdapterView.OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> av, View view, int position, long id) {
-            if(!bluetoothAdapter.isEnabled()){
+            if(!bluetoothService.bluetoothEnabled()){
                 Toast.makeText(getBaseContext(), "Bluetooth not on", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            bluetoothStatus.setText("Connecting...");
 
             // Get the device MAC address, which is the last 17 chars in the View
             String info = ((TextView) view).getText().toString();
