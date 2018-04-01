@@ -41,7 +41,7 @@
             android:enabled="true"
             android:exported="true"></service>
 
-        <activity android:name=".PaceInfo"></activity>
+        <activity android:name=".PaceInfoActivity"></activity>
     </application>
 
 </manifest>

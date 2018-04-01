@@ -173,9 +173,15 @@ public class BluetoothActivity extends AppCompatActivity {
             String info = ((TextView) view).getText().toString();
 
             bluetoothService.createConnection(info);
+            sendToPaceInfoActivity(view);
 
         }
     };
+
+    public void sendToPaceInfoActivity(View view){
+        Intent intent = new Intent(BluetoothActivity.this, PaceInfoActivity.class);
+        startActivity(intent);
+    }
 
 
 }

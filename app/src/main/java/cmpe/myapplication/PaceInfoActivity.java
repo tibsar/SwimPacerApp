@@ -3,7 +3,7 @@ package cmpe.myapplication;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-public class PaceInfo extends AppCompatActivity {
+public class PaceInfoActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
