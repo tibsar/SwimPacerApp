@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="cmpe.myapplication.PaceInfo">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="93dp">
+
+        <TextView
+            android:id="@+id/num_laps_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number of Laps:"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            tools:text="Number of Laps:" />
+
+        <EditText
+            android:id="@+id/num_laps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="The number of laps"
+            android:ems="10"
+            android:inputType="number"
+            android:text="Number of Laps"
+            tools:text="Number of Laps" />
+
+        <EditText
+            android:id="@+id/lap_time_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="Time Per Lap:"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            tools:text="Time Per Lap:" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/time_min"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:inputType="number"
+                android:text="Minutes"
+                tools:text="Minutes" />
+
+            <EditText
+                android:id="@+id/time_sec"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:inputType="number"
+                android:text="Seconds"
+                tools:text="Seconds" />
+        </LinearLayout>
+
+    </LinearLayout>
+</android.support.constraint.ConstraintLayout>
