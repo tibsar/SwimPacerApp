@@ -31,22 +31,11 @@ public class BluetoothActivity extends AppCompatActivity {
 
     //GUI components
     private Button bluetoothDiscoverBtn;
-//    private BluetoothAdapter bluetoothAdapter;
-//    private BluetoothSocket bluetoothSocket = null; // bi-directional client-to-client data path
-//    private Set<BluetoothDevice> pairedDevices;
     private ArrayAdapter<String> bluetoothArrayAdapter;
     private ListView devicesListView;
 
     private final String TAG = BluetoothActivity.class.getSimpleName();
     private Handler handler;                //main handler that receives callback notifications
-//    private ConnectedThread connectedThread; // bluetooth background worker thread
-
-    // #defines for indentifying shared types between calling functions
-    private final static int REQUEST_ENABLE_BLUETOOTH = 1; //used to identify adding bluetooth names
-    private final static int MESSAGE_READ = 2; //used in Bluetooth handler to identify message update
-    private final static int CONNECTING_STATUS = 3; //used in bluetooth handler to identify message status 
-    private static final UUID BTMODULEUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // "random" unique identifier
-
 
     //Bluetooth Service definitions
     private BluetoothService bluetoothService;
@@ -151,7 +140,7 @@ public class BluetoothActivity extends AppCompatActivity {
 
                 // Add the name to the list
                 String deviceName = device.getName();
-                if(deviceName.equals("raspberrypi")){
+                if((deviceName != null) && (deviceName.equals("raspberrypi"))){
                     bluetoothArrayAdapter.add(device.getName() + "\n" + device.getAddress());
                     bluetoothArrayAdapter.notifyDataSetChanged();
                 }
@@ -180,6 +169,7 @@ public class BluetoothActivity extends AppCompatActivity {
 
     public void sendToPaceInfoActivity(View view){
         Intent intent = new Intent(BluetoothActivity.this, PaceInfoActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
 

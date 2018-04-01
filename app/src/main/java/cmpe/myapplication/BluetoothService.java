@@ -255,5 +255,12 @@ public class BluetoothService extends Service {
         }
     }
 
+    public void sendData(String numLaps, String sec, String ms){
+        String varString = String.format("%s %s %s", numLaps, sec, ms);
+
+        if(connectedThread != null) //First check to make sure thread created
+
+            connectedThread.write(varString);
+    }
 
 }
