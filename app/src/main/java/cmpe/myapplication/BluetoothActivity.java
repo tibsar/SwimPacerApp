@@ -1,8 +1,6 @@
 package cmpe.myapplication;
 
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -10,32 +8,22 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.icu.util.Output;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Set;
+import cmpe.myapplication.BluetoothService.LocalBinder;
+
 import java.util.UUID;
 
 
@@ -83,8 +71,6 @@ public class BluetoothActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
         }
 
-//        handler = bluetoothService.newHandler();
-
         if(bluetoothArrayAdapter == null){
             //Device does not support Bluetooth
             Toast.makeText(getApplicationContext(), "Bluetooth device not found!", Toast.LENGTH_SHORT).show();
@@ -120,6 +106,9 @@ public class BluetoothActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Toast.makeText(BluetoothActivity.this, "Service is connected", Toast.LENGTH_SHORT).show();
             bounded = true;
+            LocalBinder localBinder = (LocalBinder)service;
+            bluetoothService = localBinder.getServiceInstance();
+            handler = bluetoothService.newHandler();
         }
     };
 
@@ -184,6 +173,7 @@ public class BluetoothActivity extends AppCompatActivity {
             String info = ((TextView) view).getText().toString();
 
             bluetoothService.createConnection(info);
+
         }
     };
 
