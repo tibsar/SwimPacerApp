@@ -44,8 +44,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void sendToBluetoothActivity(View view){
-//        Intent intent = new Intent(MainActivity.this, BluetoothActivity.class);
-        Intent intent = new Intent(MainActivity.this, PaceInfoActivity.class);
+        Intent intent = new Intent(MainActivity.this, BluetoothActivity.class);
+//        Intent intent = new Intent(MainActivity.this, PaceInfoActivity.class);
         startActivity(intent);
     }
 }
